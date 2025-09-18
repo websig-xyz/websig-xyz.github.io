@@ -1,5 +1,8 @@
 // WebSig Recovery Tool - Client-side wallet recovery
 // This file works 100% client-side with no external dependencies except Solana web3.js
+// Build: v1.0.1-20250117-pure-offline
+
+const BUILD_VERSION = 'v1.0.1-20250117-pure-offline';
 
 let currentKeypair = null;
 let currentMasterSeed = null; // 32-byte seed used for BIP44 derivation
@@ -59,10 +62,13 @@ async function aesGcmDecrypt(keyBytes, ciphertextB64u, ivB64u, aad){
 }
 
 async function deriveAccountSeed(masterSeed, accountIndex){
-    // Match lib/wallet-derivation.ts
+    // EXACT match of lib/wallet-derivation.ts BIP44 derivation
+    // Path components match main app exactly
     const path = `m/44'/501'/${accountIndex}'/0'/0'`;
     const salt = new TextEncoder().encode(`solana-bip44-${path}`);
     const info = new TextEncoder().encode('websig:account:v1');
+    
+    // HKDF-SHA256 to derive 32 bytes for Solana keypair seed
     return await hkdf(masterSeed, salt, info, 32);
 }
 
@@ -171,9 +177,14 @@ async function recoverWallet() {
         // Save global master seed and derive selected account
         currentMasterSeed = masterSeed;
         
-        // Log for debugging
-        console.log('Master seed (first 8 bytes):', Array.from(masterSeed.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
-        console.log('Using wrapped seed:', !!wrapText);
+        // Log derivation details for verification
+        console.log('=== Derivation Details (matching main app) ===');
+        console.log('1. PRF Salt:', 'websig:solana:keypair:v1');
+        console.log('2. Master seed (first 8 bytes):', Array.from(masterSeed.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
+        console.log('3. Using cloud wrap:', !!wrapText);
+        console.log('4. Account derivation: BIP44 path m/44\'/501\'/0\'/0\'/0\'');
+        console.log('5. CSP blocks all network:', 'connect-src \'none\'');
+        console.log('===============================================');
         
         await updateDerivedAccount();
         
@@ -318,8 +329,10 @@ function waitForSolana(callback) {
 
 // Show domain info and wire up event handlers
 window.addEventListener('DOMContentLoaded', () => {
-    console.log('Recovery tool loaded on domain:', window.location.hostname);
-    console.log('This tool works 100% client-side - check the Network tab to verify no requests are made');
+    console.log(`WebSig Recovery Tool ${BUILD_VERSION}`);
+    console.log('Domain:', window.location.hostname);
+    console.log('🔒 100% OFFLINE - No backend connections allowed by CSP');
+    console.log('📝 Derivation matches main app: PRF → Master Seed → BIP44 → Account');
     
     // Wait for Solana to load before setting up handlers
     waitForSolana(() => {
