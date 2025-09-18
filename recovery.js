@@ -68,9 +68,17 @@ async function deriveAccountSeed(masterSeed, accountIndex){
 
 async function updateDerivedAccount(){
     if (!currentMasterSeed) return;
+    
+    // Check if Solana library is loaded
+    const SolanaWeb3 = window.solanaWeb3 || window.solana || window.Solana;
+    if (!SolanaWeb3 || !SolanaWeb3.Keypair) {
+        console.error('Solana Web3.js not loaded yet');
+        return;
+    }
+    
     const idx = Math.max(0, parseInt(document.getElementById('accountIndex').value || '0', 10));
     const acctSeed = await deriveAccountSeed(currentMasterSeed, idx);
-    currentKeypair = solanaWeb3.Keypair.fromSeed(acctSeed);
+    currentKeypair = SolanaWeb3.Keypair.fromSeed(acctSeed);
     document.getElementById('address').textContent = currentKeypair.publicKey.toBase58();
     document.getElementById('privateKey').textContent = '[' + currentKeypair.secretKey.toString() + ']';
     document.getElementById('privateKeyB58').textContent = base58Encode(currentKeypair.secretKey);
