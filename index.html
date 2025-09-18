@@ -1,635 +1,796 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebSig Recovery - Your Keys, Your Control</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
-    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.min.js"></script>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.min.js"
+      defer
+    ></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, sans-serif;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        color: #ffffff;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 40px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 30px;
+        background: linear-gradient(135deg, #14f195 0%, #9945ff 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 32px;
+        background: linear-gradient(135deg, #14f195 0%, #9945ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: #888;
+        margin-bottom: 40px;
+        font-size: 14px;
+      }
+
+      .proof-section {
+        background: rgba(20, 241, 149, 0.1);
+        border: 1px solid rgba(20, 241, 149, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+      }
+
+      .proof-title {
+        color: #14f195;
+        font-weight: bold;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .proof-text {
+        color: #ccc;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .button {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #14f195 0%, #9945ff 100%);
+        border: none;
+        border-radius: 12px;
+        color: #000;
+        font-weight: bold;
+        font-size: 16px;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-bottom: 20px;
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(20, 241, 149, 0.3);
+      }
+
+      .button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .wallet-info {
+        display: none;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 30px;
+      }
+
+      .wallet-info.active {
+        display: block;
+      }
+
+      .info-row {
+        margin-bottom: 20px;
+      }
+
+      .info-label {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .info-value {
+        font-family: "Courier New", monospace;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 12px;
+        border-radius: 8px;
+        word-break: break-all;
+        font-size: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .hidden {
+        filter: blur(10px);
+        user-select: none;
+      }
+
+      .export-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .export-button {
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .export-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .warning {
+        background: rgba(255, 59, 48, 0.1);
+        border: 1px solid rgba(255, 59, 48, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 20px;
+        font-size: 12px;
+        color: #ff9999;
+      }
+
+      .steps {
+        margin: 30px 0;
+      }
+
+      .step {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 20px;
+        opacity: 0.5;
+        transition: opacity 0.3s;
+      }
+
+      .step.active {
+        opacity: 1;
+      }
+
+      .step-number {
+        width: 30px;
+        height: 30px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        flex-shrink: 0;
+        font-size: 14px;
+      }
+
+      .step.active .step-number {
+        background: linear-gradient(135deg, #14f195 0%, #9945ff 100%);
+        color: #000;
+      }
+
+      .step-content {
+        flex: 1;
+      }
+
+      .step-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+
+      .step-description {
+        font-size: 14px;
+        color: #888;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
         }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 600px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 40px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 30px;
-            background: linear-gradient(135deg, #14F195 0%, #9945FF 100%);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 32px;
-            background: linear-gradient(135deg, #14F195 0%, #9945FF 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .subtitle {
-            text-align: center;
-            color: #888;
-            margin-bottom: 40px;
-            font-size: 14px;
-        }
-        
-        .proof-section {
-            background: rgba(20, 241, 149, 0.1);
-            border: 1px solid rgba(20, 241, 149, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .proof-title {
-            color: #14F195;
-            font-weight: bold;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .proof-text {
-            color: #ccc;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        
-        .button {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #14F195 0%, #9945FF 100%);
-            border: none;
-            border-radius: 12px;
-            color: #000;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-bottom: 20px;
-        }
-        
-        .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(20, 241, 149, 0.3);
-        }
-        
-        .button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .wallet-info {
-            display: none;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 30px;
-        }
-        
-        .wallet-info.active {
-            display: block;
-        }
-        
-        .info-row {
-            margin-bottom: 20px;
-        }
-        
-        .info-label {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .info-value {
-            font-family: 'Courier New', monospace;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 12px;
-            border-radius: 8px;
-            word-break: break-all;
-            font-size: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .hidden {
-            filter: blur(10px);
-            user-select: none;
-        }
-        
-        .export-buttons {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .export-button {
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .export-button:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .warning {
-            background: rgba(255, 59, 48, 0.1);
-            border: 1px solid rgba(255, 59, 48, 0.3);
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 20px;
-            font-size: 12px;
-            color: #ff9999;
-        }
-        
-        .steps {
-            margin: 30px 0;
-        }
-        
-        .step {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            opacity: 0.5;
-            transition: opacity 0.3s;
-        }
-        
-        .step.active {
-            opacity: 1;
-        }
-        
-        .step-number {
-            width: 30px;
-            height: 30px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            flex-shrink: 0;
-            font-size: 14px;
-        }
-        
-        .step.active .step-number {
-            background: linear-gradient(135deg, #14F195 0%, #9945FF 100%);
-            color: #000;
-        }
-        
-        .step-content {
-            flex: 1;
-        }
-        
-        .step-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .step-description {
-            font-size: 14px;
-            color: #888;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .loading {
-            animation: spin 1s linear infinite;
-        }
+      }
+
+      .loading {
+        animation: spin 1s linear infinite;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="logo">🔐</div>
-        <h1>WebSig Recovery</h1>
-        <p class="subtitle">Prove you own your wallet • No backend needed • 100% client-side</p>
-        
-        <div class="proof-section">
-            <div class="proof-title">
-                <span>✅</span> What This Proves
-            </div>
-            <div class="proof-text">
-                This page demonstrates that your wallet is derived entirely from YOUR passkey. 
-                WebSig has no control over your funds. Even if WebSig disappears, you can 
-                always recover your wallet using this tool.
-            </div>
-        </div>
-        
-        <div class="proof-section">
-            <div class="proof-title">
-                <span>🔒</span> How It Works
-            </div>
-            <div class="proof-text">
-                1. Your biometric unlocks your passkey<br>
-                2. The passkey derives a unique secret (PRF)<br>
-                3. This secret generates your Solana wallet<br>
-                4. Everything happens in YOUR browser<br>
-                5. No data is sent anywhere
-            </div>
-        </div>
-        
-        <!-- Advanced (optional) - hidden by default to keep UX simple -->
-        <div class="proof-section" style="margin-top: -10px;">
-            <div class="proof-title"><span>⚙️</span> Advanced (optional)</div>
-            <details>
-                <summary style="cursor:pointer;color:#aaa">Use shared wrap seed (paste JSON)</summary>
-                <div class="proof-text" style="margin:12px 0;">
-                    If you paired across ecosystems, paste your encrypted wrap here to recover the same shared seed. Otherwise, skip this.
-                </div>
-                <label class="info-label" for="wrapInput">Encrypted Wrap JSON</label>
-                <textarea id="wrapInput" placeholder='{"iv":"...","ciphertext":"...","rpId":"websig.xyz","credIdHash":"..."}' style="width:100%;height:90px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#ddd;padding:10px;font-family:monospace;font-size:12px;"></textarea>
-            </details>
-        </div>
+      <div class="logo">🔐</div>
+      <h1>WebSig Recovery</h1>
+      <p class="subtitle">
+        Prove you own your wallet • No backend needed • 100% client-side
+      </p>
 
-        <button class="button" onclick="recoverWallet()" id="recoverBtn">
-            🔓 Recover My Wallet
-        </button>
-        
-        <div class="steps">
-            <div class="step" id="step1">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                    <div class="step-title">Authenticate with Passkey</div>
-                    <div class="step-description">Use your biometric to unlock</div>
-                </div>
-            </div>
-            <div class="step" id="step2">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                    <div class="step-title">Derive Wallet Locally</div>
-                    <div class="step-description">Generate keys in your browser</div>
-                </div>
-            </div>
-            <div class="step" id="step3">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                    <div class="step-title">Access Your Wallet</div>
-                    <div class="step-description">View and backup your native WebSig key</div>
-                </div>
-            </div>
+      <div class="proof-section">
+        <div class="proof-title"><span>✅</span> What This Proves</div>
+        <div class="proof-text">
+          This page demonstrates that your wallet is derived entirely from YOUR
+          passkey. WebSig has no control over your funds. Even if WebSig
+          disappears, you can always recover your wallet using this tool.
         </div>
-        
-        <div class="wallet-info" id="walletInfo">
-            <div class="info-row">
-                <div class="info-label">Your Solana Address</div>
-                <div class="info-value" id="address">...</div>
+      </div>
+
+      <div class="proof-section">
+        <div class="proof-title"><span>🔒</span> How It Works</div>
+        <div class="proof-text">
+          1. Your biometric unlocks your passkey<br />
+          2. The passkey derives a unique secret (PRF)<br />
+          3. This secret generates your Solana wallet<br />
+          4. Everything happens in YOUR browser<br />
+          5. No data is sent anywhere
+        </div>
+      </div>
+
+      <!-- Advanced (optional) - hidden by default to keep UX simple -->
+      <div class="proof-section" style="margin-top: -10px">
+        <div class="proof-title"><span>⚙️</span> Advanced (optional)</div>
+        <details>
+          <summary style="cursor: pointer; color: #aaa">
+            Use shared wrap seed (paste JSON)
+          </summary>
+          <div class="proof-text" style="margin: 12px 0">
+            If you paired across ecosystems, paste your encrypted wrap here to
+            recover the same shared seed. Otherwise, skip this.
+          </div>
+          <label class="info-label" for="wrapInput">Encrypted Wrap JSON</label>
+          <textarea
+            id="wrapInput"
+            placeholder='{"iv":"...","ciphertext":"...","rpId":"websig.xyz","credIdHash":"..."}'
+            style="
+              width: 100%;
+              height: 90px;
+              border-radius: 8px;
+              border: 1px solid rgba(255, 255, 255, 0.15);
+              background: rgba(0, 0, 0, 0.3);
+              color: #ddd;
+              padding: 10px;
+              font-family: monospace;
+              font-size: 12px;
+            "
+          ></textarea>
+        </details>
+      </div>
+
+      <button class="button" id="recoverBtn">🔓 Recover My Wallet</button>
+
+      <div class="steps">
+        <div class="step" id="step1">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <div class="step-title">Authenticate with Passkey</div>
+            <div class="step-description">Use your biometric to unlock</div>
+          </div>
+        </div>
+        <div class="step" id="step2">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <div class="step-title">Derive Wallet Locally</div>
+            <div class="step-description">Generate keys in your browser</div>
+          </div>
+        </div>
+        <div class="step" id="step3">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <div class="step-title">Access Your Wallet</div>
+            <div class="step-description">
+              View and backup your native WebSig key
             </div>
-            
-            <div class="info-row">
-                <div class="info-label">Private Key (Uint8Array)</div>
-                <div class="info-value hidden" id="privateKey">...</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Private Key (Base58)</div>
-                <div class="info-value hidden" id="privateKeyB58">...</div>
-            </div>
-            
-            <button class="button" onclick="revealPrivateKey()" id="revealBtn">
-                👁 Reveal Private Key
+          </div>
+        </div>
+      </div>
+
+      <div class="wallet-info" id="walletInfo">
+        <div class="info-row">
+          <div class="info-label">Account Index</div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <button class="export-button" id="decIdx" style="padding: 6px 12px">
+              ←
             </button>
-            
-            <div class="export-buttons">
-                <button class="export-button" onclick="copyPrivateKey()">
-                    📋 Copy Key
-                </button>
-                <button class="export-button" onclick="downloadBackup()">
-                    💾 Download Encrypted Backup
-                </button>
-                <button class="export-button" onclick="copyPrivateKeyB58()">
-                    📋 Copy Base58
-                </button>
-                <button class="export-button" onclick="generateQR()">
-                    📱 Generate QR
-                </button>
-            </div>
-            
-            <div class="warning">
-                ⚠️ <strong>Security Warning:</strong> Never share your private key. Anyone with this key has full control of your wallet. This recovery tool is for emergency use only.
-            </div>
+            <input
+              type="number"
+              id="accountIndex"
+              value="0"
+              min="0"
+              style="
+                width: 60px;
+                padding: 6px;
+                border-radius: 6px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: rgba(0, 0, 0, 0.3);
+                color: white;
+                text-align: center;
+              "
+            />
+            <button class="export-button" id="incIdx" style="padding: 6px 12px">
+              →
+            </button>
+          </div>
         </div>
+
+        <div class="info-row">
+          <div class="info-label">Your Solana Address</div>
+          <div class="info-value" id="address">...</div>
+        </div>
+
+        <div class="info-row">
+          <div class="info-label">Private Key (Uint8Array)</div>
+          <div class="info-value hidden" id="privateKey">...</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">Private Key (Base58)</div>
+          <div class="info-value hidden" id="privateKeyB58">...</div>
+        </div>
+
+        <button class="button" id="revealBtn">👁 Reveal Private Key</button>
+
+        <div class="export-buttons">
+          <button class="export-button" id="copyKeyBtn">📋 Copy Key</button>
+          <button class="export-button" id="downloadBackupBtn">
+            💾 Download Encrypted Backup
+          </button>
+          <button class="export-button" id="copyB58Btn">📋 Copy Base58</button>
+          <button class="export-button" id="qrBtn">📱 Generate QR</button>
+        </div>
+
+        <div class="warning">
+          ⚠️ <strong>Security Warning:</strong> Never share your private key.
+          Anyone with this key has full control of your wallet. This recovery
+          tool is for emergency use only.
+        </div>
+      </div>
     </div>
-    
+
     <script>
-        let currentKeypair = null;
-        let currentMasterSeed = null; // 32-byte seed used for BIP44 derivation
-        let isKeyRevealed = false;
-        
-        // Helper functions for crypto operations
-        async function sha256(data) {
-            const encoded = typeof data === 'string' ? new TextEncoder().encode(data) : data;
-            const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
-            return new Uint8Array(hashBuffer);
-        }
-        
-        async function hkdf(secret, salt, info, length = 32) {
-            const key = await crypto.subtle.importKey(
-                'raw',
-                secret,
-                { name: 'HKDF' },
-                false,
-                ['deriveBits']
-            );
-            
-            const bits = await crypto.subtle.deriveBits(
-                {
-                    name: 'HKDF',
-                    hash: 'SHA-256',
-                    salt: salt,
-                    info: info
-                },
-                key,
-                length * 8
-            );
-            
-            return new Uint8Array(bits);
-        }
-        
-        function base64urlEncode(bytes) {
-            const base64 = btoa(String.fromCharCode(...bytes));
-            return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        }
+      let currentKeypair = null;
+      let currentMasterSeed = null; // 32-byte seed used for BIP44 derivation
+      let isKeyRevealed = false;
 
-        function base64urlDecode(b64u){
-            const b64 = b64u.replace(/-/g,'+').replace(/_/g,'/') + '=='.slice((2 - (b64u.length * 3) % 4) % 4);
-            const raw = atob(b64);
-            const out = new Uint8Array(raw.length);
-            for (let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
-            return out;
-        }
+      // Helper functions for crypto operations
+      async function sha256(data) {
+        const encoded =
+          typeof data === "string" ? new TextEncoder().encode(data) : data;
+        const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+        return new Uint8Array(hashBuffer);
+      }
 
-        async function aesGcmDecrypt(keyBytes, ciphertextB64u, ivB64u, aad){
-            const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']);
-            const dec = await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv: base64urlDecode(ivB64u), additionalData: aad ? new TextEncoder().encode(aad) : undefined },
-                key,
-                base64urlDecode(ciphertextB64u)
-            );
-            return new Uint8Array(dec);
-        }
+      async function hkdf(secret, salt, info, length = 32) {
+        const key = await crypto.subtle.importKey(
+          "raw",
+          secret,
+          { name: "HKDF" },
+          false,
+          ["deriveBits"]
+        );
 
-        async function deriveAccountSeed(masterSeed, accountIndex){
-            // Match lib/wallet-derivation.ts
-            const path = `m/44'/501'/${accountIndex}'/0'/0'`;
-            const salt = new TextEncoder().encode(`solana-bip44-${path}`);
-            const info = new TextEncoder().encode('websig:account:v1');
-            return await hkdf(masterSeed, salt, info, 32);
-        }
+        const bits = await crypto.subtle.deriveBits(
+          {
+            name: "HKDF",
+            hash: "SHA-256",
+            salt: salt,
+            info: info,
+          },
+          key,
+          length * 8
+        );
 
-        async function updateDerivedAccount(){
-            if (!currentMasterSeed) return;
-            const idx = Math.max(0, parseInt(document.getElementById('accountIndex').value || '0', 10));
-            const acctSeed = await deriveAccountSeed(currentMasterSeed, idx);
-            currentKeypair = solanaWeb3.Keypair.fromSeed(acctSeed);
-            document.getElementById('address').textContent = currentKeypair.publicKey.toBase58();
-            document.getElementById('privateKey').textContent = '[' + currentKeypair.secretKey.toString() + ']';
-            document.getElementById('privateKeyB58').textContent = base58Encode(currentKeypair.secretKey);
-        }
-        
-        function activateStep(stepNumber) {
-            document.querySelectorAll('.step').forEach(step => {
-                step.classList.remove('active');
-            });
-            document.getElementById(`step${stepNumber}`).classList.add('active');
-        }
-        
-        async function recoverWallet() {
-            const btn = document.getElementById('recoverBtn');
-            btn.disabled = true;
-            btn.innerHTML = '🔄 Authenticating...';
-            
-            try {
-                // Step 1: Authenticate with passkey
-                activateStep(1);
-                
-                // Check if WebAuthn is supported
-                if (!window.PublicKeyCredential) {
-                    throw new Error('WebAuthn not supported in this browser');
-                }
-                
-                // Create a challenge
-                const challenge = crypto.getRandomValues(new Uint8Array(32));
-                
-                // Get the credential with PRF
-                const credential = await navigator.credentials.get({
-                    publicKey: {
-                        challenge: challenge,
-                        rpId: 'websig.xyz',
-                        userVerification: 'required',
-                        extensions: {
-                            prf: {
-                                eval: {
-                                    first: new TextEncoder().encode('websig:solana:keypair:v1')
-                                }
-                            }
-                        }
-                    }
-                });
-                
-                if (!credential.getClientExtensionResults().prf?.results?.first) {
-                    throw new Error('PRF extension not supported or no result');
-                }
-                
-                // Step 2: Derive wallet
-                activateStep(2);
-                btn.innerHTML = '🔄 Deriving wallet...';
-                
-                const prfOutput = credential.getClientExtensionResults().prf.results.first;
-                const prfBytes = new Uint8Array(prfOutput);
+        return new Uint8Array(bits);
+      }
 
-                // Compute credentialId hash (for decrypting wrap)
-                const rawId = new Uint8Array(credential.rawId);
-                const credHash = await sha256(rawId);
+      function base64urlEncode(bytes) {
+        const base64 = btoa(String.fromCharCode(...bytes));
+        return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+      }
 
-                // Default master seed = PRF-only (same as app fallback)
-                let masterSeed = prfBytes.slice(0, 32);
+      function base64urlDecode(b64u) {
+        const b64 =
+          b64u.replace(/-/g, "+").replace(/_/g, "/") +
+          "==".slice((2 - ((b64u.length * 3) % 4)) % 4);
+        const raw = atob(b64);
+        const out = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+      }
 
-                // Optional: if user pasted an encrypted wrap, decrypt it to get the common master seed
-                const wrapText = (document.getElementById('wrapInput').value || '').trim();
-                if (wrapText) {
-                    try {
-                        const wrap = JSON.parse(wrapText);
-                        const rpId = wrap.rpId || 'websig.xyz';
-                        // Derive wrap key: sha256(prf || credHash || rpId)
-                        const rpIdBytes = new TextEncoder().encode(rpId);
-                        const combined = new Uint8Array(prfBytes.length + credHash.length + rpIdBytes.length);
-                        combined.set(prfBytes, 0);
-                        combined.set(credHash, prfBytes.length);
-                        combined.set(rpIdBytes, prfBytes.length + credHash.length);
-                        const wrapKey = await sha256(combined);
-                        const aad = `${rpId}|v1`;
-                        const decrypted = await aesGcmDecrypt(wrapKey, wrap.ciphertext, wrap.iv, aad);
-                        masterSeed = decrypted.slice(0, 32);
-                    } catch (e) {
-                        console.warn('Failed to use provided wrap, falling back to PRF-only seed:', e);
-                    }
-                }
+      async function aesGcmDecrypt(keyBytes, ciphertextB64u, ivB64u, aad) {
+        const key = await crypto.subtle.importKey(
+          "raw",
+          keyBytes,
+          { name: "AES-GCM" },
+          false,
+          ["decrypt"]
+        );
+        const dec = await crypto.subtle.decrypt(
+          {
+            name: "AES-GCM",
+            iv: base64urlDecode(ivB64u),
+            additionalData: aad ? new TextEncoder().encode(aad) : undefined,
+          },
+          key,
+          base64urlDecode(ciphertextB64u)
+        );
+        return new Uint8Array(dec);
+      }
 
-                // Save global master seed and derive selected account
-                currentMasterSeed = masterSeed;
-                await updateDerivedAccount();
-                
-                // Step 3: Show wallet
-                activateStep(3);
-                btn.innerHTML = '✅ Wallet Recovered!';
-                
-                // Show wallet info section
-                document.getElementById('walletInfo').classList.add('active');
-                
-            } catch (error) {
-                console.error('Recovery failed:', error);
-                alert(`Recovery failed: ${error.message}\n\nMake sure you're using the same domain where you created your wallet.`);
-                btn.disabled = false;
-                btn.innerHTML = '🔓 Recover My Wallet';
-            }
-        }
-        
-        function revealPrivateKey() {
-            const privateKeyEl = document.getElementById('privateKey');
-            const btn = document.getElementById('revealBtn');
-            
-            if (isKeyRevealed) {
-                privateKeyEl.classList.add('hidden');
-                btn.innerHTML = '👁 Reveal Private Key';
-                isKeyRevealed = false;
-            } else {
-                if (confirm('⚠️ WARNING: Make sure no one is looking at your screen. Reveal private key?')) {
-                    privateKeyEl.classList.remove('hidden');
-                    btn.innerHTML = '🙈 Hide Private Key';
-                    isKeyRevealed = true;
-                }
-            }
-        }
-        
-        function copyPrivateKey() {
-            if (!currentKeypair) return;
-            
-            const keyString = '[' + currentKeypair.secretKey.toString() + ']';
-            navigator.clipboard.writeText(keyString);
-            alert('✅ Private key copied to clipboard');
-        }
+      async function deriveAccountSeed(masterSeed, accountIndex) {
+        // Match lib/wallet-derivation.ts
+        const path = `m/44'/501'/${accountIndex}'/0'/0'`;
+        const salt = new TextEncoder().encode(`solana-bip44-${path}`);
+        const info = new TextEncoder().encode("websig:account:v1");
+        return await hkdf(masterSeed, salt, info, 32);
+      }
 
-        // Minimal Base58 encoder (for Phantom import)
-        (function(){
-            const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-            window.base58Encode = function(input){
-                if (!input || input.length === 0) return '';
-                const bytes = Array.from(input);
-                let encoded = '';
-                while (bytes.some(b => b !== 0)) {
-                    let carry = 0;
-                    for (let i = 0; i < bytes.length; i++) {
-                        carry = carry * 256 + bytes[i];
-                        bytes[i] = Math.floor(carry / 58);
-                        carry = carry % 58;
-                    }
-                    encoded = ALPHABET[carry] + encoded;
-                }
-                for (let i = 0; i < input.length && input[i] === 0; i++) {
-                    encoded = '1' + encoded;
-                }
-                return encoded;
-            }
-        })();
+      async function updateDerivedAccount() {
+        if (!currentMasterSeed) return;
+        const idx = Math.max(
+          0,
+          parseInt(document.getElementById("accountIndex").value || "0", 10)
+        );
+        const acctSeed = await deriveAccountSeed(currentMasterSeed, idx);
+        currentKeypair = solanaWeb3.Keypair.fromSeed(acctSeed);
+        document.getElementById("address").textContent =
+          currentKeypair.publicKey.toBase58();
+        document.getElementById("privateKey").textContent =
+          "[" + currentKeypair.secretKey.toString() + "]";
+        document.getElementById("privateKeyB58").textContent = base58Encode(
+          currentKeypair.secretKey
+        );
+      }
 
-        function copyPrivateKeyB58(){
-            if (!currentKeypair) return;
-            const b58 = base58Encode(currentKeypair.secretKey);
-            navigator.clipboard.writeText(b58);
-            alert('✅ Base58 private key copied');
-        }
-
-        function stepAccount(delta){
-            const input = document.getElementById('accountIndex');
-            let val = parseInt(input.value || '0', 10);
-            val = Math.max(0, val + delta);
-            input.value = String(val);
-            updateDerivedAccount();
-        }
-        
-        async function downloadBackup() {
-            if (!currentKeypair || !currentMasterSeed) return;
-
-            // Create an encrypted backup of the master seed using a user-supplied passphrase
-            const passphrase = prompt('Enter a passphrase to encrypt your backup (store safely!)');
-            if (!passphrase) return;
-
-            const salt = crypto.getRandomValues(new Uint8Array(16));
-            const info = new TextEncoder().encode('websig:backup:v1');
-            const key = await hkdf(new TextEncoder().encode(passphrase), salt, info, 32);
-
-            const ivArr = crypto.getRandomValues(new Uint8Array(12));
-            const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'AES-GCM' }, false, ['encrypt']);
-            const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: ivArr }, cryptoKey, currentMasterSeed);
-
-            const backup = {
-                type: 'websig-wallet-backup',
-                version: '2.0',
-                timestamp: new Date().toISOString(),
-                address: currentKeypair.publicKey.toBase58(),
-                encryptedSeed: base64urlEncode(new Uint8Array(enc)),
-                iv: base64urlEncode(ivArr),
-                salt: base64urlEncode(salt),
-                kdf: 'HKDF-SHA256',
-                info: 'websig:backup:v1',
-                warning: 'Store this file and your passphrase securely. Both are required to restore.'
-            };
-
-            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `websig-backup-${currentKeypair.publicKey.toBase58().slice(0, 8)}.json`;
-            a.click();
-        }
-        
-        function generateQR() {
-            alert('QR code generation would require a QR library. For now, use the Copy Key feature.');
-        }
-        
-        // Show domain info
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log('Recovery tool loaded on domain:', window.location.hostname);
-            console.log('This tool works 100% client-side - check the Network tab to verify no requests are made');
+      function activateStep(stepNumber) {
+        document.querySelectorAll(".step").forEach((step) => {
+          step.classList.remove("active");
         });
+        document.getElementById(`step${stepNumber}`).classList.add("active");
+      }
+
+      async function recoverWallet() {
+        const btn = document.getElementById("recoverBtn");
+        btn.disabled = true;
+        btn.innerHTML = "🔄 Authenticating...";
+
+        try {
+          // Step 1: Authenticate with passkey
+          activateStep(1);
+
+          // Check if WebAuthn is supported
+          if (!window.PublicKeyCredential) {
+            throw new Error("WebAuthn not supported in this browser");
+          }
+
+          // Create a challenge
+          const challenge = crypto.getRandomValues(new Uint8Array(32));
+
+          // Get the credential with PRF
+          const credential = await navigator.credentials.get({
+            publicKey: {
+              challenge: challenge,
+              rpId: "websig.xyz",
+              userVerification: "required",
+              extensions: {
+                prf: {
+                  eval: {
+                    first: new TextEncoder().encode("websig:solana:keypair:v1"),
+                  },
+                },
+              },
+            },
+          });
+
+          if (!credential.getClientExtensionResults().prf?.results?.first) {
+            throw new Error("PRF extension not supported or no result");
+          }
+
+          // Step 2: Derive wallet
+          activateStep(2);
+          btn.innerHTML = "🔄 Deriving wallet...";
+
+          const prfOutput =
+            credential.getClientExtensionResults().prf.results.first;
+          const prfBytes = new Uint8Array(prfOutput);
+
+          // Compute credentialId hash (for decrypting wrap)
+          const rawId = new Uint8Array(credential.rawId);
+          const credHash = await sha256(rawId);
+
+          // Default master seed = PRF-only (same as app fallback)
+          let masterSeed = prfBytes.slice(0, 32);
+
+          // Optional: if user pasted an encrypted wrap, decrypt it to get the common master seed
+          const wrapText = (
+            document.getElementById("wrapInput").value || ""
+          ).trim();
+          if (wrapText) {
+            try {
+              const wrap = JSON.parse(wrapText);
+              const rpId = wrap.rpId || "websig.xyz";
+              // Derive wrap key: sha256(prf || credHash || rpId)
+              const rpIdBytes = new TextEncoder().encode(rpId);
+              const combined = new Uint8Array(
+                prfBytes.length + credHash.length + rpIdBytes.length
+              );
+              combined.set(prfBytes, 0);
+              combined.set(credHash, prfBytes.length);
+              combined.set(rpIdBytes, prfBytes.length + credHash.length);
+              const wrapKey = await sha256(combined);
+              const aad = `${rpId}|v1`;
+              const decrypted = await aesGcmDecrypt(
+                wrapKey,
+                wrap.ciphertext,
+                wrap.iv,
+                aad
+              );
+              masterSeed = decrypted.slice(0, 32);
+            } catch (e) {
+              console.warn(
+                "Failed to use provided wrap, falling back to PRF-only seed:",
+                e
+              );
+            }
+          }
+
+          // Save global master seed and derive selected account
+          currentMasterSeed = masterSeed;
+          await updateDerivedAccount();
+
+          // Step 3: Show wallet
+          activateStep(3);
+          btn.innerHTML = "✅ Wallet Recovered!";
+
+          // Show wallet info section
+          document.getElementById("walletInfo").classList.add("active");
+        } catch (error) {
+          console.error("Recovery failed:", error);
+          alert(
+            `Recovery failed: ${error.message}\n\nMake sure you're using the same domain where you created your wallet.`
+          );
+          btn.disabled = false;
+          btn.innerHTML = "🔓 Recover My Wallet";
+        }
+      }
+
+      function revealPrivateKey() {
+        const privateKeyEl = document.getElementById("privateKey");
+        const btn = document.getElementById("revealBtn");
+
+        if (isKeyRevealed) {
+          privateKeyEl.classList.add("hidden");
+          btn.innerHTML = "👁 Reveal Private Key";
+          isKeyRevealed = false;
+        } else {
+          if (
+            confirm(
+              "⚠️ WARNING: Make sure no one is looking at your screen. Reveal private key?"
+            )
+          ) {
+            privateKeyEl.classList.remove("hidden");
+            btn.innerHTML = "🙈 Hide Private Key";
+            isKeyRevealed = true;
+          }
+        }
+      }
+
+      function copyPrivateKey() {
+        if (!currentKeypair) return;
+
+        const keyString = "[" + currentKeypair.secretKey.toString() + "]";
+        navigator.clipboard.writeText(keyString);
+        alert("✅ Private key copied to clipboard");
+      }
+
+      // Minimal Base58 encoder (for Phantom import)
+      (function () {
+        const ALPHABET =
+          "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+        window.base58Encode = function (input) {
+          if (!input || input.length === 0) return "";
+          const bytes = Array.from(input);
+          let encoded = "";
+          while (bytes.some((b) => b !== 0)) {
+            let carry = 0;
+            for (let i = 0; i < bytes.length; i++) {
+              carry = carry * 256 + bytes[i];
+              bytes[i] = Math.floor(carry / 58);
+              carry = carry % 58;
+            }
+            encoded = ALPHABET[carry] + encoded;
+          }
+          for (let i = 0; i < input.length && input[i] === 0; i++) {
+            encoded = "1" + encoded;
+          }
+          return encoded;
+        };
+      })();
+
+      function copyPrivateKeyB58() {
+        if (!currentKeypair) return;
+        const b58 = base58Encode(currentKeypair.secretKey);
+        navigator.clipboard.writeText(b58);
+        alert("✅ Base58 private key copied");
+      }
+
+      function stepAccount(delta) {
+        const input = document.getElementById("accountIndex");
+        let val = parseInt(input.value || "0", 10);
+        val = Math.max(0, val + delta);
+        input.value = String(val);
+        updateDerivedAccount();
+      }
+
+      async function downloadBackup() {
+        if (!currentKeypair || !currentMasterSeed) return;
+
+        // Create an encrypted backup of the master seed using a user-supplied passphrase
+        const passphrase = prompt(
+          "Enter a passphrase to encrypt your backup (store safely!)"
+        );
+        if (!passphrase) return;
+
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const info = new TextEncoder().encode("websig:backup:v1");
+        const key = await hkdf(
+          new TextEncoder().encode(passphrase),
+          salt,
+          info,
+          32
+        );
+
+        const ivArr = crypto.getRandomValues(new Uint8Array(12));
+        const cryptoKey = await crypto.subtle.importKey(
+          "raw",
+          key,
+          { name: "AES-GCM" },
+          false,
+          ["encrypt"]
+        );
+        const enc = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: ivArr },
+          cryptoKey,
+          currentMasterSeed
+        );
+
+        const backup = {
+          type: "websig-wallet-backup",
+          version: "2.0",
+          timestamp: new Date().toISOString(),
+          address: currentKeypair.publicKey.toBase58(),
+          encryptedSeed: base64urlEncode(new Uint8Array(enc)),
+          iv: base64urlEncode(ivArr),
+          salt: base64urlEncode(salt),
+          kdf: "HKDF-SHA256",
+          info: "websig:backup:v1",
+          warning:
+            "Store this file and your passphrase securely. Both are required to restore.",
+        };
+
+        const blob = new Blob([JSON.stringify(backup, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `websig-backup-${currentKeypair.publicKey
+          .toBase58()
+          .slice(0, 8)}.json`;
+        a.click();
+      }
+
+      function generateQR() {
+        alert(
+          "QR code generation would require a QR library. For now, use the Copy Key feature."
+        );
+      }
+
+      // Show domain info and wire up event handlers
+      window.addEventListener("DOMContentLoaded", () => {
+        console.log(
+          "Recovery tool loaded on domain:",
+          window.location.hostname
+        );
+        console.log(
+          "This tool works 100% client-side - check the Network tab to verify no requests are made"
+        );
+
+        // Wire up all event handlers
+        const recoverBtn = document.getElementById("recoverBtn");
+        if (recoverBtn) {
+          recoverBtn.addEventListener("click", recoverWallet);
+          console.log("Recover button wired up");
+        }
+
+        const revealBtn = document.getElementById("revealBtn");
+        if (revealBtn) {
+          revealBtn.addEventListener("click", revealPrivateKey);
+        }
+
+        const copyKeyBtn = document.getElementById("copyKeyBtn");
+        if (copyKeyBtn) {
+          copyKeyBtn.addEventListener("click", copyPrivateKey);
+        }
+
+        const copyB58Btn = document.getElementById("copyB58Btn");
+        if (copyB58Btn) {
+          copyB58Btn.addEventListener("click", copyPrivateKeyB58);
+        }
+
+        const downloadBackupBtn = document.getElementById("downloadBackupBtn");
+        if (downloadBackupBtn) {
+          downloadBackupBtn.addEventListener("click", downloadBackup);
+        }
+
+        const qrBtn = document.getElementById("qrBtn");
+        if (qrBtn) {
+          qrBtn.addEventListener("click", generateQR);
+        }
+
+        // Account index navigation
+        const decBtn = document.getElementById("decIdx");
+        if (decBtn) {
+          decBtn.addEventListener("click", () => stepAccount(-1));
+        }
+
+        const incBtn = document.getElementById("incIdx");
+        if (incBtn) {
+          incBtn.addEventListener("click", () => stepAccount(1));
+        }
+
+        const accountInput = document.getElementById("accountIndex");
+        if (accountInput) {
+          accountInput.addEventListener("change", updateDerivedAccount);
+        }
+      });
     </script>
-</body>
+  </body>
 </html>
