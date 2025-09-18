@@ -70,15 +70,14 @@ async function updateDerivedAccount(){
     if (!currentMasterSeed) return;
     
     // Check if Solana library is loaded
-    const SolanaWeb3 = window.solanaWeb3 || window.solana || window.Solana;
-    if (!SolanaWeb3 || !SolanaWeb3.Keypair) {
+    if (!window.solanaWeb3 || !window.solanaWeb3.Keypair) {
         console.error('Solana Web3.js not loaded yet');
         return;
     }
     
     const idx = Math.max(0, parseInt(document.getElementById('accountIndex').value || '0', 10));
     const acctSeed = await deriveAccountSeed(currentMasterSeed, idx);
-    currentKeypair = SolanaWeb3.Keypair.fromSeed(acctSeed);
+    currentKeypair = window.solanaWeb3.Keypair.fromSeed(acctSeed);
     document.getElementById('address').textContent = currentKeypair.publicKey.toBase58();
     document.getElementById('privateKey').textContent = '[' + currentKeypair.secretKey.toString() + ']';
     document.getElementById('privateKeyB58').textContent = base58Encode(currentKeypair.secretKey);
@@ -283,56 +282,82 @@ function generateQR() {
     alert('QR code generation would require a QR library. For now, use the Copy Key feature.');
 }
 
+// Wait for Solana Web3.js to load
+function waitForSolana(callback) {
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds max wait
+    
+    const checkInterval = setInterval(() => {
+        attempts++;
+        
+        // Check for Solana library
+        if (window.solanaWeb3 && window.solanaWeb3.Keypair) {
+            clearInterval(checkInterval);
+            console.log('✅ Solana Web3.js loaded successfully');
+            callback();
+        } else if (attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            console.error('❌ Failed to load Solana Web3.js after 5 seconds');
+            alert('Failed to load Solana library. Please refresh the page and try again.');
+        }
+    }, 100); // Check every 100ms
+}
+
 // Show domain info and wire up event handlers
 window.addEventListener('DOMContentLoaded', () => {
     console.log('Recovery tool loaded on domain:', window.location.hostname);
     console.log('This tool works 100% client-side - check the Network tab to verify no requests are made');
     
-    // Wire up all event handlers
-    const recoverBtn = document.getElementById('recoverBtn');
-    if (recoverBtn) {
-        recoverBtn.addEventListener('click', recoverWallet);
-        console.log('Recover button wired up');
-    }
-    
-    const revealBtn = document.getElementById('revealBtn');
-    if (revealBtn) {
-        revealBtn.addEventListener('click', revealPrivateKey);
-    }
-    
-    const copyKeyBtn = document.getElementById('copyKeyBtn');
-    if (copyKeyBtn) {
-        copyKeyBtn.addEventListener('click', copyPrivateKey);
-    }
-    
-    const copyB58Btn = document.getElementById('copyB58Btn');
-    if (copyB58Btn) {
-        copyB58Btn.addEventListener('click', copyPrivateKeyB58);
-    }
-    
-    const downloadBackupBtn = document.getElementById('downloadBackupBtn');
-    if (downloadBackupBtn) {
-        downloadBackupBtn.addEventListener('click', downloadBackup);
-    }
-    
-    const qrBtn = document.getElementById('qrBtn');
-    if (qrBtn) {
-        qrBtn.addEventListener('click', generateQR);
-    }
-    
-    // Account index navigation
-    const decBtn = document.getElementById('decIdx');
-    if (decBtn) {
-        decBtn.addEventListener('click', () => stepAccount(-1));
-    }
-    
-    const incBtn = document.getElementById('incIdx');
-    if (incBtn) {
-        incBtn.addEventListener('click', () => stepAccount(1));
-    }
-    
-    const accountInput = document.getElementById('accountIndex');
-    if (accountInput) {
-        accountInput.addEventListener('change', updateDerivedAccount);
-    }
+    // Wait for Solana to load before setting up handlers
+    waitForSolana(() => {
+        console.log('Solana library ready, setting up event handlers...');
+        
+        // Wire up all event handlers
+        const recoverBtn = document.getElementById('recoverBtn');
+        if (recoverBtn) {
+            recoverBtn.addEventListener('click', recoverWallet);
+            console.log('Recover button wired up');
+        }
+        
+        const revealBtn = document.getElementById('revealBtn');
+        if (revealBtn) {
+            revealBtn.addEventListener('click', revealPrivateKey);
+        }
+        
+        const copyKeyBtn = document.getElementById('copyKeyBtn');
+        if (copyKeyBtn) {
+            copyKeyBtn.addEventListener('click', copyPrivateKey);
+        }
+        
+        const copyB58Btn = document.getElementById('copyB58Btn');
+        if (copyB58Btn) {
+            copyB58Btn.addEventListener('click', copyPrivateKeyB58);
+        }
+        
+        const downloadBackupBtn = document.getElementById('downloadBackupBtn');
+        if (downloadBackupBtn) {
+            downloadBackupBtn.addEventListener('click', downloadBackup);
+        }
+        
+        const qrBtn = document.getElementById('qrBtn');
+        if (qrBtn) {
+            qrBtn.addEventListener('click', generateQR);
+        }
+        
+        // Account index navigation
+        const decBtn = document.getElementById('decIdx');
+        if (decBtn) {
+            decBtn.addEventListener('click', () => stepAccount(-1));
+        }
+        
+        const incBtn = document.getElementById('incIdx');
+        if (incBtn) {
+            incBtn.addEventListener('click', () => stepAccount(1));
+        }
+        
+        const accountInput = document.getElementById('accountIndex');
+        if (accountInput) {
+            accountInput.addEventListener('change', updateDerivedAccount);
+        }
+    });
 });
