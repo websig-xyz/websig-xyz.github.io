@@ -80,7 +80,7 @@ async function deriveLookupKey(prfBytes) {
 async function checkForCloudWrap(lookupKey, prfBytes, credHash) {
     try {
         // Try to fetch from backend
-        const response = await fetch(`https://websig-wallet-worker.quiknode-labs.workers.dev/api/wallet-wrap?lookupKey=${lookupKey}`);
+        const response = await fetch(`https://websig-wallet-worker.maurodelazeri.workers.dev/v1/wrap?lookupKey=${lookupKey}`);
         if (response.ok) {
             const data = await response.json();
             if (data && data.wraps && data.wraps.length > 0) {
