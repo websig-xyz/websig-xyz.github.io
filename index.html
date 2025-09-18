@@ -267,23 +267,17 @@
             </div>
         </div>
         
-        <!-- Optional inputs so users can recover exactly like the main app -->
+        <!-- Advanced (optional) - hidden by default to keep UX simple -->
         <div class="proof-section" style="margin-top: -10px;">
-            <div class="proof-title"><span>⚙️</span> Recovery Options</div>
-            <div class="proof-text" style="margin-bottom:12px;">
-                • Domain (RP ID): <code>websig.xyz</code> (fixed to match your passkey)<br>
-                • Paste your encrypted seed wrap (optional) if you paired across ecosystems.<br>
-                • Choose account index to derive BIP44 accounts exactly like WebSig.
-            </div>
-            <label class="info-label" for="wrapInput">Encrypted Wrap JSON (optional)</label>
-            <textarea id="wrapInput" placeholder='{"iv":"...","ciphertext":"...","rpId":"websig.xyz","credIdHash":"..."}' style="width:100%;height:90px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#ddd;padding:10px;font-family:monospace;font-size:12px;">
-            </textarea>
-            <div style="display:flex;gap:12px;margin-top:12px;align-items:center;">
-                <label class="info-label" for="accountIndex" style="margin:0;">Account Index</label>
-                <input id="accountIndex" type="number" min="0" value="0" style="width:90px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;padding:8px 10px;font-size:14px;" />
-                <button class="export-button" onclick="stepAccount(-1)">◀ Prev</button>
-                <button class="export-button" onclick="stepAccount(1)">Next ▶</button>
-            </div>
+            <div class="proof-title"><span>⚙️</span> Advanced (optional)</div>
+            <details>
+                <summary style="cursor:pointer;color:#aaa">Use shared wrap seed (paste JSON)</summary>
+                <div class="proof-text" style="margin:12px 0;">
+                    If you paired across ecosystems, paste your encrypted wrap here to recover the same shared seed. Otherwise, skip this.
+                </div>
+                <label class="info-label" for="wrapInput">Encrypted Wrap JSON</label>
+                <textarea id="wrapInput" placeholder='{"iv":"...","ciphertext":"...","rpId":"websig.xyz","credIdHash":"..."}' style="width:100%;height:90px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#ddd;padding:10px;font-family:monospace;font-size:12px;"></textarea>
+            </details>
         </div>
 
         <button class="button" onclick="recoverWallet()" id="recoverBtn">
@@ -639,4 +633,3 @@
     </script>
 </body>
 </html>
-
