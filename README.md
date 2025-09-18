@@ -198,8 +198,6 @@ recovery.js
 
 Found a vulnerability? Please report responsibly:
 - Email: security@websig.xyz
-- PGP: [public key](https://websig.xyz/pgp)
-- Bug Bounty: Up to $10,000
 
 ## Build & Deploy
 
