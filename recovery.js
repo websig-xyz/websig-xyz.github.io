@@ -79,16 +79,28 @@ async function deriveLookupKey(prfBytes) {
 // Check for cloud-stored wrap
 async function checkForCloudWrap(lookupKey, prfBytes, credHash) {
     try {
+        console.log('Fetching wraps from backend...');
+        console.log('Using lookup key:', lookupKey);
+        
         // Try to fetch from backend
         const response = await fetch(`https://websig-wallet-worker.maurodelazeri.workers.dev/v1/wrap?lookupKey=${lookupKey}`);
+        console.log('Response status:', response.status);
+        
         if (response.ok) {
             const data = await response.json();
+            console.log('Full response data:', JSON.stringify(data, null, 2));
+            
             if (data && data.wraps && data.wraps.length > 0) {
                 console.log('Found cloud wrap(s):', data.wraps.length);
+                console.log('Metadata public key:', data.metadata?.accounts?.[0]?.publicKey);
                 
                 // Try to decrypt the first compatible wrap
                 for (const wrap of data.wraps) {
                     try {
+                        console.log('Attempting to decrypt wrap from device:', wrap.deviceName);
+                        console.log('Wrap credIdHash:', wrap.credIdHash);
+                        console.log('Our credHash (base64):', base64urlEncode(credHash));
+                        
                         const rpId = wrap.rpId || 'websig.xyz';
                         const rpIdBytes = new TextEncoder().encode(rpId);
                         const combined = new Uint8Array(prfBytes.length + credHash.length + rpIdBytes.length);
@@ -96,6 +108,8 @@ async function checkForCloudWrap(lookupKey, prfBytes, credHash) {
                         combined.set(credHash, prfBytes.length);
                         combined.set(rpIdBytes, prfBytes.length + credHash.length);
                         const wrapKey = await sha256(combined);
+                        console.log('Wrap key (first 8 bytes):', Array.from(wrapKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
+                        
                         const aad = `${rpId}|v1`;
                         const decrypted = await aesGcmDecrypt(wrapKey, wrap.ciphertext, wrap.iv, aad);
                         const cloudSeed = decrypted.slice(0, 32);
@@ -200,6 +214,9 @@ async function recoverWallet() {
         // Compute credentialId hash (for decrypting wrap)
         const rawId = new Uint8Array(credential.rawId);
         const credHash = await sha256(rawId);
+        console.log('Credential ID (base64):', base64urlEncode(rawId).slice(0, 32) + '...');
+        console.log('Credential ID hash (base64):', base64urlEncode(credHash));
+        console.log('PRF output (first 8 bytes):', Array.from(prfBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
 
         // Default master seed = PRF-only (same as app fallback)
         let masterSeed = prfBytes.slice(0, 32);
