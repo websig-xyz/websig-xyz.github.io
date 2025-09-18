@@ -1,8 +1,8 @@
 // WebSig Recovery Tool - Client-side wallet recovery
 // This file works 100% client-side with no external dependencies except Solana web3.js
-// Build: v1.0.1-20250117-pure-offline
+// Build: v1.0.2-20250117-pure-offline
 
-const BUILD_VERSION = 'v1.0.1-20250117-pure-offline';
+const BUILD_VERSION = 'v1.0.2-20250117-pure-offline';
 
 let currentKeypair = null;
 let currentMasterSeed = null; // 32-byte seed used for BIP44 derivation
@@ -117,10 +117,11 @@ async function recoverWallet() {
         const challenge = crypto.getRandomValues(new Uint8Array(32));
         
         // Get the credential with PRF
+        // Use websig.xyz for production (recovery tool always on that domain)
         const credential = await navigator.credentials.get({
             publicKey: {
                 challenge: challenge,
-                rpId: 'websig.xyz',
+                rpId: 'websig.xyz', // Must match where wallet was created
                 userVerification: 'required',
                 extensions: {
                     prf: {
