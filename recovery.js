@@ -1,20 +1,42 @@
-// WebSig Recovery Tool - Client-side wallet recovery
-// This file works 100% client-side with no external dependencies except Solana web3.js
-// Build: v1.0.3-20250117-security-fix
+/**
+ * WebSig Recovery Tool - Cryptographic Self-Custody Proof
+ * 
+ * This tool proves you have complete control over your wallet by deriving
+ * your Solana private key directly from your passkey using standard cryptography:
+ * - WebAuthn PRF Extension: Hardware-backed key derivation
+ * - HKDF-SHA256: Cryptographically secure key expansion
+ * - BIP44-like paths: Deterministic account derivation
+ * 
+ * Security: Runs 100% client-side, CSP blocks all network requests
+ * Verification: Open source at github.com/websig-xyz/websig-xyz.github.io
+ */
 
-const BUILD_VERSION = 'v1.0.3-20250117-security-fix';
+const BUILD_VERSION = 'v1.0.4-20250117-technical';
 
+// Global state
 let currentKeypair = null;
-let currentMasterSeed = null; // 32-byte seed used for BIP44 derivation
+let currentMasterSeed = null; // 256-bit entropy from PRF
 let isKeyRevealed = false;
 
-// Helper functions for crypto operations
+/**
+ * Cryptographic Primitives using Web Crypto API
+ * All operations use NIST-approved algorithms
+ */
 async function sha256(data) {
     const encoded = typeof data === 'string' ? new TextEncoder().encode(data) : data;
     const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
     return new Uint8Array(hashBuffer);
 }
 
+/**
+ * HKDF-SHA256 (NIST SP 800-56C Rev. 2)
+ * Cryptographically secure key derivation function
+ * @param {Uint8Array} secret - Input key material (IKM)
+ * @param {Uint8Array} salt - Salt for domain separation
+ * @param {Uint8Array} info - Context/version binding
+ * @param {number} length - Output length in bytes
+ * @returns {Uint8Array} Derived key material
+ */
 async function hkdf(secret, salt, info, length = 32) {
     const key = await crypto.subtle.importKey(
         'raw',
@@ -61,19 +83,26 @@ async function aesGcmDecrypt(keyBytes, ciphertextB64u, ivB64u, aad){
     return new Uint8Array(dec);
 }
 
+/**
+ * BIP44-inspired deterministic account derivation
+ * Uses HKDF for cryptographic key separation between accounts
+ * 
+ * Derivation path: m/44'/501'/${accountIndex}'/0'/0'
+ * - 44': BIP44 standard
+ * - 501': Solana coin type
+ * - accountIndex': User account (hardened)
+ * 
+ * @param {Uint8Array} masterSeed - 256-bit master seed from PRF
+ * @param {number} accountIndex - Account index (0-based)
+ * @returns {Uint8Array} 256-bit account-specific seed for Ed25519
+ */
 async function deriveAccountSeed(masterSeed, accountIndex){
-    // EXACT match of lib/wallet-derivation.ts BIP44 derivation
-    // Path components match main app exactly
     const path = `m/44'/501'/${accountIndex}'/0'/0'`;
     const salt = new TextEncoder().encode(`solana-bip44-${path}`);
     const info = new TextEncoder().encode('websig:account:v1');
-    
-    // HKDF-SHA256 to derive 32 bytes for Solana keypair seed
     return await hkdf(masterSeed, salt, info, 32);
 }
 
-// NO BACKEND DEPENDENCIES - This is a self-custody proof tool!
-// The recovery tool works 100% offline with just your passkey
 
 async function updateDerivedAccount(){
     if (!currentMasterSeed) return;
@@ -116,16 +145,20 @@ async function recoverWallet() {
         // Create a challenge
         const challenge = crypto.getRandomValues(new Uint8Array(32));
         
-        // Get the credential with PRF
-        // Use websig.xyz for production (recovery tool always on that domain)
+        /**
+         * WebAuthn PRF Extension (Level 3 Specification)
+         * Evaluates HMAC-SHA256(credential_private_key, salt)
+         * The credential private key never leaves the hardware security module
+         */
         const credential = await navigator.credentials.get({
             publicKey: {
                 challenge: challenge,
-                rpId: 'websig.xyz', // Must match where wallet was created
-                userVerification: 'required',
+                rpId: 'websig.xyz', // Domain binding - prevents phishing
+                userVerification: 'required', // Biometric/PIN mandatory
                 extensions: {
                     prf: {
                         eval: {
+                            // Salt for PRF - deterministic wallet derivation
                             first: new TextEncoder().encode('websig:solana:keypair:v1')
                         }
                     }
@@ -133,6 +166,7 @@ async function recoverWallet() {
             }
         });
         
+        // Verify PRF was evaluated successfully
         if (!credential.getClientExtensionResults().prf?.results?.first) {
             throw new Error('PRF extension not supported or no result');
         }
@@ -141,18 +175,18 @@ async function recoverWallet() {
         activateStep(2);
         btn.innerHTML = '🔄 Deriving wallet...';
         
+        // Extract PRF output (256 bits of entropy)
         const prfOutput = credential.getClientExtensionResults().prf.results.first;
         const prfBytes = new Uint8Array(prfOutput);
 
-        // Compute credentialId hash (for decrypting wrap)
+        // Compute credential ID hash for wrap decryption
         const rawId = new Uint8Array(credential.rawId);
         const credHash = await sha256(rawId);
-        // Security: Don't log sensitive credential or PRF data
 
-        // Default master seed = PRF-only (same as app fallback)
+        // Master seed: First 32 bytes of PRF output (256-bit security)
         let masterSeed = prfBytes.slice(0, 32);
 
-        // Optional: if user pasted an encrypted wrap, decrypt it to get the common master seed
+        // Optional: Cross-ecosystem wrap decryption
         const wrapText = (document.getElementById('wrapInput').value || '').trim();
         if (wrapText) {
             try {
@@ -173,22 +207,14 @@ async function recoverWallet() {
             }
         }
 
-        // Save global master seed and derive selected account
+        // Store master seed and derive initial account
         currentMasterSeed = masterSeed;
-        
-        // Security: Don't log sensitive master seed data
-        // Derivation uses: PRF → Master Seed → BIP44 → Account
-        
         await updateDerivedAccount();
         
-        // Step 3: Show wallet
+        // Step 3: Display recovered wallet
         activateStep(3);
         btn.innerHTML = '✅ Wallet Recovered!';
-        
-        // Show wallet info section
         document.getElementById('walletInfo').classList.add('active');
-        
-        // NO CLOUD FETCHING - This is a self-custody proof tool!
         
     } catch (error) {
         console.error('Recovery failed:', error);
