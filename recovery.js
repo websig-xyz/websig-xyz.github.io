@@ -1,8 +1,8 @@
 // WebSig Recovery Tool - Client-side wallet recovery
 // This file works 100% client-side with no external dependencies except Solana web3.js
-// Build: v1.0.2-20250117-pure-offline
+// Build: v1.0.3-20250117-security-fix
 
-const BUILD_VERSION = 'v1.0.2-20250117-pure-offline';
+const BUILD_VERSION = 'v1.0.3-20250117-security-fix';
 
 let currentKeypair = null;
 let currentMasterSeed = null; // 32-byte seed used for BIP44 derivation
@@ -147,9 +147,7 @@ async function recoverWallet() {
         // Compute credentialId hash (for decrypting wrap)
         const rawId = new Uint8Array(credential.rawId);
         const credHash = await sha256(rawId);
-        console.log('Credential ID (base64):', base64urlEncode(rawId).slice(0, 32) + '...');
-        console.log('Credential ID hash (base64):', base64urlEncode(credHash));
-        console.log('PRF output (first 8 bytes):', Array.from(prfBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
+        // Security: Don't log sensitive credential or PRF data
 
         // Default master seed = PRF-only (same as app fallback)
         let masterSeed = prfBytes.slice(0, 32);
@@ -178,14 +176,8 @@ async function recoverWallet() {
         // Save global master seed and derive selected account
         currentMasterSeed = masterSeed;
         
-        // Log derivation details for verification
-        console.log('=== Derivation Details (matching main app) ===');
-        console.log('1. PRF Salt:', 'websig:solana:keypair:v1');
-        console.log('2. Master seed (first 8 bytes):', Array.from(masterSeed.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
-        console.log('3. Using cloud wrap:', !!wrapText);
-        console.log('4. Account derivation: BIP44 path m/44\'/501\'/0\'/0\'/0\'');
-        console.log('5. CSP blocks all network:', 'connect-src \'none\'');
-        console.log('===============================================');
+        // Security: Don't log sensitive master seed data
+        // Derivation uses: PRF → Master Seed → BIP44 → Account
         
         await updateDerivedAccount();
         
@@ -343,7 +335,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const recoverBtn = document.getElementById('recoverBtn');
         if (recoverBtn) {
             recoverBtn.addEventListener('click', recoverWallet);
-            console.log('Recover button wired up');
         }
         
         const revealBtn = document.getElementById('revealBtn');
