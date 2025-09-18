@@ -66,6 +66,69 @@ async function deriveAccountSeed(masterSeed, accountIndex){
     return await hkdf(masterSeed, salt, info, 32);
 }
 
+// Derive lookup key for fetching wraps from backend
+async function deriveLookupKey(prfBytes) {
+    const rpId = 'websig.xyz';
+    const combined = new Uint8Array(prfBytes.length + rpId.length);
+    combined.set(prfBytes, 0);
+    combined.set(new TextEncoder().encode(rpId), prfBytes.length);
+    const hash = await sha256(combined);
+    return base64urlEncode(hash);
+}
+
+// Check for cloud-stored wrap
+async function checkForCloudWrap(lookupKey, prfBytes, credHash) {
+    try {
+        // Try to fetch from backend
+        const response = await fetch(`https://websig-wallet-worker.quiknode-labs.workers.dev/api/wallet-wrap?lookupKey=${lookupKey}`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.wraps && data.wraps.length > 0) {
+                console.log('Found cloud wrap(s):', data.wraps.length);
+                
+                // Try to decrypt the first compatible wrap
+                for (const wrap of data.wraps) {
+                    try {
+                        const rpId = wrap.rpId || 'websig.xyz';
+                        const rpIdBytes = new TextEncoder().encode(rpId);
+                        const combined = new Uint8Array(prfBytes.length + credHash.length + rpIdBytes.length);
+                        combined.set(prfBytes, 0);
+                        combined.set(credHash, prfBytes.length);
+                        combined.set(rpIdBytes, prfBytes.length + credHash.length);
+                        const wrapKey = await sha256(combined);
+                        const aad = `${rpId}|v1`;
+                        const decrypted = await aesGcmDecrypt(wrapKey, wrap.ciphertext, wrap.iv, aad);
+                        const cloudSeed = decrypted.slice(0, 32);
+                        
+                        console.log('Successfully decrypted cloud wrap!');
+                        console.log('Cloud seed (first 8 bytes):', Array.from(cloudSeed.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
+                        
+                        // Update to use cloud seed
+                        currentMasterSeed = cloudSeed;
+                        await updateDerivedAccount();
+                        
+                        // Show notification
+                        const info = document.createElement('div');
+                        info.style.cssText = 'background:#10b981;color:white;padding:12px;border-radius:8px;margin:16px 0;text-align:center;';
+                        info.textContent = '✅ Cloud backup found and loaded';
+                        document.getElementById('walletInfo').insertBefore(info, document.getElementById('walletInfo').firstChild);
+                        
+                        return;
+                    } catch (e) {
+                        console.warn('Failed to decrypt wrap:', e);
+                    }
+                }
+            } else {
+                console.log('No cloud wraps found, using PRF-only seed');
+            }
+        } else {
+            console.log('No cloud backup found (404), using PRF-only seed');
+        }
+    } catch (error) {
+        console.warn('Failed to check cloud wraps:', error);
+    }
+}
+
 async function updateDerivedAccount(){
     if (!currentMasterSeed) return;
     
@@ -164,6 +227,11 @@ async function recoverWallet() {
 
         // Save global master seed and derive selected account
         currentMasterSeed = masterSeed;
+        
+        // Log for debugging
+        console.log('Master seed (first 8 bytes):', Array.from(masterSeed.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(''));
+        console.log('Using wrapped seed:', !!wrapText);
+        
         await updateDerivedAccount();
         
         // Step 3: Show wallet
@@ -172,6 +240,14 @@ async function recoverWallet() {
         
         // Show wallet info section
         document.getElementById('walletInfo').classList.add('active');
+        
+        // Check if we should try to fetch a wrap
+        if (!wrapText) {
+            // Try to fetch wrap from backend
+            const lookupKey = await deriveLookupKey(prfBytes);
+            console.log('Checking for cloud wrap with lookup key:', lookupKey.slice(0, 16) + '...');
+            await checkForCloudWrap(lookupKey, prfBytes, credHash);
+        }
         
     } catch (error) {
         console.error('Recovery failed:', error);

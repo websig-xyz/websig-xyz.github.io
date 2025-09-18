@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Solana Loading</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+</head>
+<body>
+    <h1>Testing Solana Web3.js CDN</h1>
+    <pre id="output"></pre>
+    <script>
+        window.addEventListener('load', () => {
+            const output = document.getElementById('output');
+            output.textContent = 'Checking global variables...\n';
+            
+            if (window.solanaWeb3) {
+                output.textContent += '✅ window.solanaWeb3 is available\n';
+                output.textContent += 'Has Keypair: ' + (!!window.solanaWeb3.Keypair) + '\n';
+            } else {
+                output.textContent += '❌ window.solanaWeb3 not found\n';
+            }
+            
+            if (window.solana) {
+                output.textContent += '✅ window.solana is available\n';
+            } else {
+                output.textContent += '❌ window.solana not found\n';
+            }
+            
+            if (window.Solana) {
+                output.textContent += '✅ window.Solana is available\n';
+            } else {
+                output.textContent += '❌ window.Solana not found\n';
+            }
+            
+            // List all global variables that might be from Solana
+            const globals = Object.keys(window).filter(key => 
+                key.toLowerCase().includes('solana') || 
+                key.toLowerCase().includes('web3')
+            );
+            output.textContent += '\nGlobal variables containing "solana" or "web3": ' + globals.join(', ');
+        });
+    </script>
+</body>
+</html>
